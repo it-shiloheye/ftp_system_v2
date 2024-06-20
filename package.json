@@ -3,7 +3,18 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev:client":"cd client && air | tee tmp.log.txt",
+    "dev:utils":"cd utils && air | tee tmp.log.txt",
+    "dev:server":"cd server && air | tee tmp.log.txt",
+    "dev":"powershell ./dev_script.ps1",
+    "openports":"netstat -a -n -p tcp -o",
+    "kill:server":"taskkill -im ftp_server.exe -f",
+    "kill:client":"taskkill -im ftp_client.exe -f",
+    "kill:air":"taskkill -im air.exe -f",
+    "kill":"powershell ./dev_kill_script.ps1",
+    "unlock":"powershell \"Get-ChildItem * -Include *.lock -Recurse | Remove-Item\""
+
   },
   "keywords": [],
   "author": "",

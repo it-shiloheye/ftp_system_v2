@@ -1,0 +1,10 @@
+version: "2"
+sql:
+  - engine: "postgresql"
+    queries: "_lib\db_access\sql\queries"
+    schema: "_lib\db_access\sql\schema"
+    gen:
+      go:
+        package: "db_access"
+        out: "_lib\db_access"
+        sql_package: "pgx/v5"
