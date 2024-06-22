@@ -31,6 +31,7 @@ go.work.sum
 
 */tmp*
 /.git
+*/db_access/init.sql
 
 .env
 /logs
@@ -63,4 +64,5 @@ go.work.sum
 
 #tmp 
 /tmp
+/lib/main*
 /main
