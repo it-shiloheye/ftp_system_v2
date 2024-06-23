@@ -1,6 +1,38 @@
 # Commit Notes
 
-### 22nd June 2024, 23:59 GMT +3
+### 23rd June 2024, 18:34 PM GMT +3
+```sh
+1. Rewriting server and logging 
+2. Rewriting db queries, to have single main table
+# Please enter the commit message for your changes. Lines starting
+# with '#' will be ignored, and an empty message aborts the commit.
+#
+# On branch main
+# Your branch is up to date with 'origin/main'.
+#
+# Changes to be committed:
+#	modified:   lib/base/ip_handling.go
+#	modified:   lib/db_access/generated/client_queries.sql.go
+#	modified:   lib/db_access/generated/models.go
+#	modified:   lib/db_access/sql/schema/client_id.sql
+#	modified:   lib/logging/logging_struct.go
+#	modified:   lib/sqlc.yaml
+#	modified:   package.json
+#	renamed:    server-peer/.air.toml -> peer/.air.toml
+#	new file:   peer/config/config.go
+#	renamed:    server-peer/main.go -> peer/main.go
+#	new file:   peer/network-peer/network_peer.go
+#	renamed:    server-peer/remove-item.ps1 -> peer/remove-item.ps1
+#	renamed:    server-peer/server/init_server.go -> peer/server/init_server.go
+#	renamed:    server-peer/server/server_loop.go -> peer/server/server_loop.go
+#	new file:   peer/server/server_type.go
+#	deleted:    server-peer/config/config.go
+#	deleted:    server-peer/server/register_routes.go
+#
+
+```
+
+### 22nd June 2024, 23:59 PM GMT +3
 ```sh
 1. Shifting from server-client to peer-db-peer 
 2. Using React-SWC-TS as browser frontend

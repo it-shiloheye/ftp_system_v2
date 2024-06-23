@@ -2,7 +2,6 @@ package ftp_context
 
 import (
 	"context"
-	"log"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -88,8 +87,6 @@ func (ctx *ContextStruct) Deadline() (t time.Time, ok bool) {
 }
 
 func (ctx *ContextStruct) Value(key any) any {
-	log.Println(key)
-	// panic("don't use this")
 	return key
 }
 

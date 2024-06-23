@@ -64,15 +64,14 @@ func (st *ServerType) InitServer(server_cert *ftp_tlshandler.TLSCert) <-chan err
 		defer ctx.Finished()
 		log.Println("Starting: gin_server_main_thread")
 
-		port := st.HttpsServer.Addr
+		port := st.Port
 		st.HttpsServer = &http.Server{
-			Addr:      ":" + st.Port,
+			Addr:      st.Port,
 			Handler:   r,
 			TLSConfig: ftp_tlshandler.ServerTLSConf(server_cert.TlsCert),
 		}
 
-		log.Println("https://127.0.0.1" + port)
-		log.Println("https://" + ServerConfig.LocalIp().String() + port)
+		log.Println("\nhttps://127.0.0.1"+port, "\nhttps://"+ServerConfig.LocalIp().String()+port)
 
 		if err_ := st.HttpsServer.ListenAndServeTLS("", ""); err_ != nil {
 			st.ErrC <- Logger.LogErr(loc, &log_item.LogItem{

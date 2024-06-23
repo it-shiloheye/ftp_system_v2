@@ -10,7 +10,7 @@ import (
 	"encoding/pem"
 	"fmt"
 	"io"
-	"log"
+	// "log"
 	"math/big"
 	"net"
 	"net/http"
@@ -237,7 +237,7 @@ func GenerateTLSCert(ca_pem CAPem, X509_ x509.Certificate) (tls_cert TLSCert, er
 		return
 	}
 
-	log.Println(tls_cert)
+	// log.Println(tls_cert)
 	tls_cert.Cert, err = x509.CreateCertificate(rand.Reader, &tls_cert.X509, &ca_pem.X509, &tls_cert.PrivKey.PublicKey, ca_pem.PrivKey)
 	if err != nil {
 		err = log_item.NewLogItem(loc, log_item.LogLevelError01).

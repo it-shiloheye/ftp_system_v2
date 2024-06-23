@@ -37,9 +37,10 @@ type LoggerStruct struct {
 }
 
 func InitialiseLogging(logging_dir string) {
+	loc := log_item.Locf("func InitialiseLogging(logging_dir: %s)", logging_dir)
 	log.Println("loading logger")
 	log.Println(logging_dir, "logging directory")
-	loc := log_item.Locf("ffunc InitialiseLogging(logging_dir: %s)", logging_dir)
+
 	log_file_p := logging_dir + "/logs/log_file.txt"
 	log_err_file_p := logging_dir + "/logs/log_err_file.txt"
 	log_today_file_p := logging_dir + "/logs/sess/" + log_file_name() + ".txt"
