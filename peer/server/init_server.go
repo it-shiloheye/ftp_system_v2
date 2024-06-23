@@ -12,7 +12,7 @@ import (
 	ftp_base "github.com/it-shiloheye/ftp_system_v2/lib/base"
 	"github.com/it-shiloheye/ftp_system_v2/lib/logging/log_item"
 	ftp_tlshandler "github.com/it-shiloheye/ftp_system_v2/lib/tls_handler/v2"
-	"github.com/it-shiloheye/ftp_system_v2/server-peer/config"
+	"github.com/it-shiloheye/ftp_system_v2/peer/config"
 )
 
 var ServerConfig = server_config.ServerConfig
@@ -51,18 +51,6 @@ func init() {
 		log.Printf(`server initialised certs, took: %03dms`, time.Since(start).Milliseconds())
 	}()
 
-	local_ip := net.ParseIP(ServerConfig.LocalIp)
-
-	web_ip := net.ParseIP(ServerConfig.WebIp)
-
-	if web_ip == nil && local_ip == nil {
-
-		if local_ip == nil {
-			log.Fatalln("ServerConfig.LocalIp\ninvalid ip:", ServerConfig.LocalIp)
-		}
-		log.Fatalln("ServerConfig.WebIp\ninvalid ip:", ServerConfig.WebIp)
-	}
-
 	template_cd := ftp_tlshandler.CertData{
 		Organization:  "Shiloh Eye, Ltd",
 		Country:       "KE",
@@ -76,8 +64,7 @@ func init() {
 		IPAddrresses: []net.IP{
 			net.IPv4(127, 0, 0, 1),
 			net.IPv6loopback,
-			local_ip,
-			web_ip,
+			server_config.ServerConfig.LocalIp().To4(),
 		},
 	}
 

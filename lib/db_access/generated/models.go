@@ -18,6 +18,7 @@ const (
 	FileStatusTypeNew     FileStatusType = "new"
 	FileStatusTypeShared  FileStatusType = "shared"
 	FileStatusTypeDeleted FileStatusType = "deleted"
+	FileStatusTypeUpdated FileStatusType = "updated"
 )
 
 func (e *FileStatusType) Scan(src interface{}) error {
@@ -61,16 +62,17 @@ type FileStorage struct {
 	FileName         string             `json:"file_name"`
 	FilePath         string             `json:"file_path"`
 	FileType         string             `json:"file_type"`
-	FileHash         pgtype.Text        `json:"file_hash"`
-	PrevFileHash     pgtype.Text        `json:"prev_file_hash"`
+	FileHash         *string            `json:"file_hash"`
+	PrevFileHash     *string            `json:"prev_file_hash"`
 	Creation         pgtype.Timestamptz `json:"creation"`
 	ModificationDate pgtype.Timestamp   `json:"modification_date"`
 	FileState        NullFileStatusType `json:"file_state"`
-	FileData         interface{}        `json:"file_data"`
+	FileData         []byte             `json:"file_data"`
 }
 
 type PeersTable struct {
 	ID        int32       `json:"id"`
 	PeerID    pgtype.UUID `json:"peer_id"`
 	IpAddress string      `json:"ip_address"`
+	Pem       []byte      `json:"pem"`
 }

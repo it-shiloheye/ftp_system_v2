@@ -25,7 +25,7 @@ func GetOutboundIP() (net.IP, error) {
 }
 
 // Get preferred outbound ip of this machine within 192.168.0.0/24
-func GeLocalNettOutboundIP() (net.IP, error) {
+func GetLocalNetOutboundIP() (net.IP, error) {
 	addrs, err1 := net.InterfaceAddrs()
 	if err1 != nil {
 		return nil, err1

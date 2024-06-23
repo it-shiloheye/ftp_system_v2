@@ -38,17 +38,17 @@ type LoggerStruct struct {
 
 func InitialiseLogging(logging_dir string) {
 	log.Println("loading logger")
-
+	log.Println(logging_dir, "logging directory")
 	loc := log_item.Locf("ffunc InitialiseLogging(logging_dir: %s)", logging_dir)
-	log_file_p := logging_dir + "/log/log_file.txt"
-	log_err_file_p := logging_dir + "/log/log_err_file.txt"
-	log_today_file_p := logging_dir + "/log/sess/" + log_file_name() + ".txt"
+	log_file_p := logging_dir + "/logs/log_file.txt"
+	log_err_file_p := logging_dir + "/logs/log_err_file.txt"
+	log_today_file_p := logging_dir + "/logs/sess/" + log_file_name() + ".txt"
 
 	log.Printf("%s\nlog_file_p: %s\nlog_err_file_p: %s\n", loc, log_file_p, log_err_file_p)
 	// os.Exit(1)
 	var err1, err2, err3, err4 error
 
-	err1 = os.MkdirAll(logging_dir+"/log/sess", fs.FileMode(base.S_IRWXO|base.S_IRWXU))
+	err1 = os.MkdirAll(logging_dir+"/logs/sess", fs.FileMode(base.S_IRWXO|base.S_IRWXU))
 	if !errors.Is(err1, os.ErrExist) && err1 != nil {
 		a := &log_item.LogItem{
 			Location: loc,

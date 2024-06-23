@@ -21,7 +21,15 @@ SELECT (
 WHERE file_hash = $1
 `
 
-func (q *Queries) GetFileData(ctx context.Context, fileHash pgtype.Text) (interface{}, error) {
+// GetFileData
+//
+//	SELECT (
+//	    peer_id,
+//	    file_state,
+//	    file_data
+//	) FROM file_storage
+//	WHERE file_hash = $1
+func (q *Queries) GetFileData(ctx context.Context, fileHash *string) (interface{}, error) {
 	row := q.db.QueryRow(ctx, getFileData, fileHash)
 	var column_1 interface{}
 	err := row.Scan(&column_1)
@@ -41,13 +49,25 @@ SELECT (
 WHERE peer_id = $1
 `
 
+// GetFiles
+//
+//	SELECT (
+//	    file_name,
+//	    file_path,
+//	    file_type,
+//	    modification_date,
+//	    file_state,
+//	    file_hash,
+//	    prev_file_hash
+//	) FROM file_storage
+//	WHERE peer_id = $1
 func (q *Queries) GetFiles(ctx context.Context, peerID uuid.UUID) ([]interface{}, error) {
 	rows, err := q.db.Query(ctx, getFiles, peerID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []interface{}
+	items := []interface{}{}
 	for rows.Next() {
 		var column_1 interface{}
 		if err := rows.Scan(&column_1); err != nil {
@@ -91,10 +111,32 @@ type InsertFileParams struct {
 	FileType         string             `json:"file_type"`
 	ModificationDate pgtype.Timestamp   `json:"modification_date"`
 	FileState        NullFileStatusType `json:"file_state"`
-	FileData         interface{}        `json:"file_data"`
+	FileData         []byte             `json:"file_data"`
 }
 
-func (q *Queries) InsertFile(ctx context.Context, arg InsertFileParams) (interface{}, error) {
+// InsertFile
+//
+//	INSERT INTO file_storage (
+//	    peer_id,
+//	    file_name,
+//	    file_path,
+//	    file_type,
+//	    modification_date,
+//	    file_state,
+//	    file_data
+//	) VALUES (
+//	    $1,
+//	    $2,
+//	    $3,
+//	    $4,
+//	    $5,
+//	    $6,
+//	    $7
+//	) RETURNING (
+//	    id,
+//	    file_hash
+//	)
+func (q *Queries) InsertFile(ctx context.Context, arg *InsertFileParams) (interface{}, error) {
 	row := q.db.QueryRow(ctx, insertFile,
 		arg.PeerID,
 		arg.FileName,

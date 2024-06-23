@@ -13,7 +13,7 @@ import (
 func ServerLoop(ctx ftp_context.Context) (ftp_err log_item.LogErr) {
 	defer ctx.Finished()
 	select {
-	case ftp_err = <-gin_server_main_thread(ctx, certs_loc.tlsCert):
+	case ftp_err = <-ftp_peer_server(ctx, certs_loc.tlsCert):
 		break
 	case <-ctx.Done():
 	}
@@ -21,7 +21,7 @@ func ServerLoop(ctx ftp_context.Context) (ftp_err log_item.LogErr) {
 	return
 }
 
-func gin_server_main_thread(ctx ftp_context.Context, server_cert *ftp_tlshandler.TLSCert) <-chan log_item.LogErr {
+func ftp_peer_server(ctx ftp_context.Context, server_cert *ftp_tlshandler.TLSCert) <-chan log_item.LogErr {
 	loc := log_item.Loc("gin_server_main_thread(ctx ftp_context.Context) (err log_item.LogErr)")
 
 	err_c := make(chan log_item.LogErr, 1)
@@ -73,20 +73,19 @@ func gin_server_main_thread(ctx ftp_context.Context, server_cert *ftp_tlshandler
 		})
 	})
 
-	RegisterRoutes(r)
-
 	ctx.Add()
 	go func() {
 		defer ctx.Finished()
 		log.Println("Starting: gin_server_main_thread")
 
 		srv := http.Server{
-			Addr:      ServerConfig.ServerPort,
+			Addr:      ServerConfig.PeerPort,
 			Handler:   r,
 			TLSConfig: ftp_tlshandler.ServerTLSConf(server_cert.TlsCert),
 		}
 
-		log.Println("https://127.0.0.1", srv.Addr)
+		log.Println("https://127.0.0.1" + ServerConfig.PeerPort)
+		log.Println("https://" + ServerConfig.LocalIp().String() + ServerConfig.PeerPort)
 
 		if err_ := srv.ListenAndServeTLS("", ""); err_ != nil {
 			err_c <- log_item.NewLogItem(loc, log_item.LogLevelError01).

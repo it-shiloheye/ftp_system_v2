@@ -4,8 +4,8 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev:lib":"cd _lib && air | tee tmp.log.txt",
-    "dev:server":"cd server-peer && air | tee tmp.log.txt",
+    "dev:lib":"cd lib && air | tee tmp.log.txt",
+    "dev:server":"cd peer && air | tee tmp.log.txt",
     "dev":"powershell ./dev_script.ps1",
     "openports":"netstat -a -n -p tcp -o",
     "kill:server":"taskkill -im ftp_server.exe -f",
