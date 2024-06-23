@@ -20,17 +20,15 @@ type ServerType struct {
 	HttpsServer *http.Server
 	*gin.Engine
 
-	ErrC      chan error
-	ServerRun func(ctx ftp_context.Context)
+	ServerRun func(ctx ftp_context.Context, err_c chan error)
 }
 
-func (st *ServerType) InitServer(server_cert *ftp_tlshandler.TLSCert) <-chan error {
+func (st *ServerType) InitServer(server_cert *ftp_tlshandler.TLSCert) {
 
 	loc := log_item.Loc("gin_server_main_thread(ctx ftp_context.Context) (err log_item.LogErr)")
 
 	st.Engine = gin.Default()
 	r := st.Engine
-	st.ErrC = make(chan error, 1)
 
 	server_ip, ip_net, err1 := net.ParseCIDR("192.168.0.0/24")
 	if err1 != nil {
@@ -60,30 +58,41 @@ func (st *ServerType) InitServer(server_cert *ftp_tlshandler.TLSCert) <-chan err
 		})
 	})
 
-	st.ServerRun = func(ctx ftp_context.Context) {
+	port := st.Port
+
+	st.HttpsServer = &http.Server{
+		Addr:    st.Port,
+		Handler: r,
+	}
+	if server_cert != nil {
+		st.HttpsServer.TLSConfig = ftp_tlshandler.ServerTLSConf(server_cert.TlsCert)
+	}
+
+	st.ServerRun = func(ctx ftp_context.Context, err_c chan error) {
 		defer ctx.Finished()
 		log.Println("Starting: gin_server_main_thread")
 
-		port := st.Port
-		st.HttpsServer = &http.Server{
-			Addr:      st.Port,
-			Handler:   r,
-			TLSConfig: ftp_tlshandler.ServerTLSConf(server_cert.TlsCert),
-		}
+		log.Println("\nhttp://127.0.0.1"+port, "\nhttps://"+ServerConfig.LocalIp().String()+port)
 
-		log.Println("\nhttps://127.0.0.1"+port, "\nhttps://"+ServerConfig.LocalIp().String()+port)
-
-		if err_ := st.HttpsServer.ListenAndServeTLS("", ""); err_ != nil {
-			st.ErrC <- Logger.LogErr(loc, &log_item.LogItem{
-				Message:   "server failed",
-				Level:     log_item.LogLevelError01,
-				CallStack: []error{err_},
-			})
+		if st.HttpsServer.TLSConfig != nil {
+			if err_ := st.HttpsServer.ListenAndServeTLS("", ""); err_ != nil {
+				err_c <- Logger.LogErr(loc, &log_item.LogItem{
+					Message:   "server failed",
+					Level:     log_item.LogLevelError01,
+					CallStack: []error{err_},
+				})
+			}
+		} else {
+			if err_ := st.HttpsServer.ListenAndServe(); err_ != nil {
+				err_c <- Logger.LogErr(loc, &log_item.LogItem{
+					Message:   "server failed",
+					Level:     log_item.LogLevelError01,
+					CallStack: []error{err_},
+				})
+			}
 		}
-		close(st.ErrC)
 	}
 
-	return st.ErrC
 }
 
 func valid_ip(ip string, ip_net *net.IPNet, server_ip net.IP) bool {

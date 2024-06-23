@@ -17,7 +17,7 @@ import (
 
 var ServerConfig = server_config.ServerConfig
 
-var certs_loc = CertsLocation{
+var C_loc = &CertsLocation{
 	CertsDirectory: ServerConfig.CertsDirectory,
 	caPem:          &ftp_tlshandler.CAPem{},
 	cert_d:         ftp_tlshandler.CertData{},
@@ -29,6 +29,10 @@ type CertsLocation struct {
 	cert_d         ftp_tlshandler.CertData
 	caPem          *ftp_tlshandler.CAPem
 	tlsCert        *ftp_tlshandler.TLSCert
+}
+
+func (c *CertsLocation) Cert() *ftp_tlshandler.TLSCert {
+	return c.tlsCert
 }
 
 func (cd CertsLocation) CA() string {
@@ -68,33 +72,33 @@ func init() {
 		},
 	}
 
-	ca_buf, err1 := os.ReadFile(certs_loc.CA())
+	ca_buf, err1 := os.ReadFile(C_loc.CA())
 	if err1 != nil {
 		if !errors.Is(err1, os.ErrNotExist) {
 			log.Fatalln(&log_item.LogItem{Location: loc, Time: time.Now(),
 
-				After:   "ca_buf, err1 := os.ReadFile(certs_loc.CA())",
+				After:   "ca_buf, err1 := os.ReadFile(C_loc.CA())",
 				Message: err1.Error(),
 				Level:   log_item.LogLevelError02, CallStack: []error{err1},
 			})
 		}
 
-		err2 := os.MkdirAll(certs_loc.CertsDirectory, f_mode)
+		err2 := os.MkdirAll(C_loc.CertsDirectory, f_mode)
 		if err2 != nil && !errors.Is(err2, os.ErrExist) {
 			log.Fatalln(&log_item.LogItem{Location: loc, Time: time.Now(),
 
-				After:   "err2 := os.MkdirAll(certs_loc.CertsDirectory, f_mode)",
+				After:   "err2 := os.MkdirAll(C_loc.CertsDirectory, f_mode)",
 				Message: err2.Error(),
 				Level:   log_item.LogLevelError02, CallStack: []error{err2, err1},
 			})
 		}
 
-		cd_buf, err3 := os.ReadFile(certs_loc.CertData())
+		cd_buf, err3 := os.ReadFile(C_loc.CertData())
 		if err3 != nil {
 			if !errors.Is(err3, os.ErrNotExist) {
 				log.Fatalln(&log_item.LogItem{Location: loc, Time: time.Now(),
 
-					After:   "cd_buf, err3 := os.ReadFile(certs_loc.CertData())",
+					After:   "cd_buf, err3 := os.ReadFile(C_loc.CertData())",
 					Message: err3.Error(),
 					Level:   log_item.LogLevelError02, CallStack: []error{err3, err1},
 				})
@@ -109,30 +113,30 @@ func init() {
 					Level:   log_item.LogLevelError02, CallStack: []error{err3, err1},
 				})
 			}
-			err5 := os.WriteFile(certs_loc.CertData(), cd_buf, f_mode)
+			err5 := os.WriteFile(C_loc.CertData(), cd_buf, f_mode)
 			if err5 != nil {
 				log.Fatalln(&log_item.LogItem{Location: loc, Time: time.Now(),
 
-					After:   `err5 := os.WriteFile(certs_loc.CertData(),cd_buf,f_mode)`,
+					After:   `err5 := os.WriteFile(C_loc.CertData(),cd_buf,f_mode)`,
 					Message: err5.Error(),
 					Level:   log_item.LogLevelError02, CallStack: []error{err3, err1},
 				})
 			}
 
-			log.Fatalf(`please fill the Organisation and CertificateData in: %s`, certs_loc.CertData())
+			log.Fatalf(`please fill the Organisation and CertificateData in: %s`, C_loc.CertData())
 		}
 
-		err4 := json.Unmarshal(cd_buf, &certs_loc.cert_d)
+		err4 := json.Unmarshal(cd_buf, &C_loc.cert_d)
 		if err4 != nil {
 			log.Fatalln(&log_item.LogItem{Location: loc, Time: time.Now(),
 
-				After:   `err4 := json.Unmarshal(cd_buf,&certs_loc.cert_d)`,
+				After:   `err4 := json.Unmarshal(cd_buf,&C_loc.cert_d)`,
 				Message: err4.Error(),
 				Level:   log_item.LogLevelError02, CallStack: []error{err1},
 			})
 		}
 
-		tmp_x509 := ftp_tlshandler.ExampleCACert(certs_loc.cert_d)
+		tmp_x509 := ftp_tlshandler.ExampleCACert(C_loc.cert_d)
 
 		tmp, err5 := ftp_tlshandler.GenerateCAPem(tmp_x509)
 		if err5 != nil {
@@ -144,7 +148,7 @@ func init() {
 			})
 		}
 
-		*certs_loc.caPem = tmp
+		*C_loc.caPem = tmp
 
 		ca_buf_, err6 := json.MarshalIndent(&tmp, " ", "\t")
 		if err6 != nil {
@@ -157,22 +161,22 @@ func init() {
 		}
 		ca_buf = ca_buf_
 
-		err7 := ftp_base.WriteFile(certs_loc.CA(), ca_buf)
+		err7 := ftp_base.WriteFile(C_loc.CA(), ca_buf)
 		if err7 != nil {
 			log.Fatalln(&log_item.LogItem{Location: loc, Time: time.Now(),
 				Level:     log_item.LogLevelError02,
-				After:     `err7 := ftp_base.WriteFile(certs_loc.CA(),ca_buf)`,
+				After:     `err7 := ftp_base.WriteFile(C_loc.CA(),ca_buf)`,
 				Message:   err7.Error(),
 				CallStack: []error{err1},
 			})
 		}
 	} else {
 		// I expect to have a ca_buf with the caPEM data in bytes
-		err2 := json.Unmarshal(ca_buf, certs_loc.caPem)
+		err2 := json.Unmarshal(ca_buf, C_loc.caPem)
 		if err2 != nil {
 			log.Fatalln(&log_item.LogItem{Location: loc, Time: time.Now(),
 				Level:     log_item.LogLevelError02,
-				After:     `err2 := json.Unmarshal(ca_buf, certs_loc.caPem)`,
+				After:     `err2 := json.Unmarshal(ca_buf, C_loc.caPem)`,
 				Message:   err2.Error(),
 				CallStack: []error{err2},
 			})
@@ -184,15 +188,15 @@ func init() {
 
 	// generate new tls each time
 	x509_tls_cert := ftp_tlshandler.ExampleTLSCert(template_cd)
-	tmp, err3 := ftp_tlshandler.GenerateTLSCert(*certs_loc.caPem, x509_tls_cert)
+	tmp, err3 := ftp_tlshandler.GenerateTLSCert(*C_loc.caPem, x509_tls_cert)
 	if err3 != nil {
 		log.Fatalln(&log_item.LogItem{Location: loc, Time: time.Now(),
 
-			After:   "tmp, err3 := ftp_tlshandler.GenerateTLSCert(*certs_loc.caPem,x509_tls_cert)",
+			After:   "tmp, err3 := ftp_tlshandler.GenerateTLSCert(*C_loc.caPem,x509_tls_cert)",
 			Message: err3.Error(),
 			Level:   log_item.LogLevelError02, CallStack: []error{err3},
 		})
 	}
-	*certs_loc.tlsCert = tmp
+	*C_loc.tlsCert = tmp
 
 }

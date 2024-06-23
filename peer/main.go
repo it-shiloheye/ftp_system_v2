@@ -6,8 +6,9 @@ import (
 	ftp_context "github.com/it-shiloheye/ftp_system_v2/lib/context"
 	db "github.com/it-shiloheye/ftp_system_v2/lib/db_access"
 	"github.com/it-shiloheye/ftp_system_v2/lib/logging"
+	browserserver "github.com/it-shiloheye/ftp_system_v2/peer/browser-server"
 	server_config "github.com/it-shiloheye/ftp_system_v2/peer/config"
-	"github.com/it-shiloheye/ftp_system_v2/peer/server"
+	networkpeer "github.com/it-shiloheye/ftp_system_v2/peer/network-peer"
 )
 
 var ServerConfig = server_config.ServerConfig
@@ -26,5 +27,12 @@ func main() {
 
 	defer close_db_conn()
 	go logging.Logger.Engine(ctx, ServerConfig.StorageDirectory)
-	server.ServerLoop(ctx)
+
+	PeerSrv := networkpeer.CreatePeerServer()
+	BrowserSrv := browserserver.CreateBrowserServer()
+	err_c := make(chan error)
+	go PeerSrv.ServerRun(ctx.Add(), err_c)
+	go BrowserSrv.ServerRun(ctx.Add(), err_c)
+
+	ctx.Wait()
 }

@@ -1,4 +1,4 @@
-package networkpeer
+package browserserver
 
 import (
 	server_config "github.com/it-shiloheye/ftp_system_v2/peer/config"
@@ -8,13 +8,13 @@ import (
 var ServerConfig = server_config.ServerConfig
 var C_loc = server.C_loc
 
-func CreatePeerServer() *server.ServerType {
+func CreateBrowserServer() *server.ServerType {
 
 	Srvr := &server.ServerType{
-		Port: ServerConfig.PeerPort,
+		Port: ServerConfig.BrowserPort,
 	}
 
-	Srvr.InitServer(C_loc.Cert())
+	Srvr.InitServer(nil)
 
 	return Srvr
 
