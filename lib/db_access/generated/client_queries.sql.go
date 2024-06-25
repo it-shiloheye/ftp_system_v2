@@ -12,13 +12,113 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const getFileData = `-- name: GetFileData :one
+const connectClient = `-- name: ConnectClient :many
+SELECT id, peer_id, ip_address, pem FROM peers_table
+WHERE ip_address = $1
+LIMIT 1
+`
+
+// ConnectClient
+//
+//	SELECT id, peer_id, ip_address, pem FROM peers_table
+//	WHERE ip_address = $1
+//	LIMIT 1
+func (q *Queries) ConnectClient(ctx context.Context, db DBTX, ipAddress string) ([]*PeersTable, error) {
+	rows, err := db.Query(ctx, connectClient, ipAddress)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []*PeersTable{}
+	for rows.Next() {
+		var i PeersTable
+		if err := rows.Scan(
+			&i.ID,
+			&i.PeerID,
+			&i.IpAddress,
+			&i.Pem,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, &i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const createClient = `-- name: CreateClient :many
+INSERT INTO peers_table(peer_id,ip_address, PEM )
+VALUES  (default,$1, $2)
+RETURNING (peer_id)
+`
+
+type CreateClientParams struct {
+	IpAddress string `json:"ip_address"`
+	Pem       []byte `json:"pem"`
+}
+
+// CreateClient
+//
+//	INSERT INTO peers_table(peer_id,ip_address, PEM )
+//	VALUES  (default,$1, $2)
+//	RETURNING (peer_id)
+func (q *Queries) CreateClient(ctx context.Context, db DBTX, arg *CreateClientParams) ([]pgtype.UUID, error) {
+	rows, err := db.Query(ctx, createClient, arg.IpAddress, arg.Pem)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []pgtype.UUID{}
+	for rows.Next() {
+		var peer_id pgtype.UUID
+		if err := rows.Scan(&peer_id); err != nil {
+			return nil, err
+		}
+		items = append(items, peer_id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getAllPem = `-- name: GetAllPem :many
+SELECT (pem) FROM peers_table
+`
+
+// GetAllPem
+//
+//	SELECT (pem) FROM peers_table
+func (q *Queries) GetAllPem(ctx context.Context, db DBTX) ([][]byte, error) {
+	rows, err := db.Query(ctx, getAllPem)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := [][]byte{}
+	for rows.Next() {
+		var pem []byte
+		if err := rows.Scan(&pem); err != nil {
+			return nil, err
+		}
+		items = append(items, pem)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getFileData = `-- name: GetFileData :many
 SELECT (
     peer_id,
     file_state,
     file_data
 ) FROM file_storage 
 WHERE file_hash = $1
+LIMIT 1
 `
 
 // GetFileData
@@ -29,11 +129,25 @@ WHERE file_hash = $1
 //	    file_data
 //	) FROM file_storage
 //	WHERE file_hash = $1
-func (q *Queries) GetFileData(ctx context.Context, fileHash *string) (interface{}, error) {
-	row := q.db.QueryRow(ctx, getFileData, fileHash)
-	var column_1 interface{}
-	err := row.Scan(&column_1)
-	return column_1, err
+//	LIMIT 1
+func (q *Queries) GetFileData(ctx context.Context, db DBTX, fileHash *string) ([]interface{}, error) {
+	rows, err := db.Query(ctx, getFileData, fileHash)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []interface{}{}
+	for rows.Next() {
+		var column_1 interface{}
+		if err := rows.Scan(&column_1); err != nil {
+			return nil, err
+		}
+		items = append(items, column_1)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const getFiles = `-- name: GetFiles :many
@@ -61,8 +175,8 @@ WHERE peer_id = $1
 //	    prev_file_hash
 //	) FROM file_storage
 //	WHERE peer_id = $1
-func (q *Queries) GetFiles(ctx context.Context, peerID uuid.UUID) ([]interface{}, error) {
-	rows, err := q.db.Query(ctx, getFiles, peerID)
+func (q *Queries) GetFiles(ctx context.Context, db DBTX, peerID uuid.UUID) ([]interface{}, error) {
+	rows, err := db.Query(ctx, getFiles, peerID)
 	if err != nil {
 		return nil, err
 	}
@@ -90,14 +204,8 @@ INSERT INTO file_storage (
     modification_date,
     file_state,
     file_data
-) VALUES (
-    $1,
-    $2,
-    $3,
-    $4,
-    $5,
-    $6,
-    $7
+) VALUES ( 
+    $1, $2, $3, $4, $5, $6, $7
 ) RETURNING (
     id,
     file_hash
@@ -125,19 +233,13 @@ type InsertFileParams struct {
 //	    file_state,
 //	    file_data
 //	) VALUES (
-//	    $1,
-//	    $2,
-//	    $3,
-//	    $4,
-//	    $5,
-//	    $6,
-//	    $7
+//	    $1, $2, $3, $4, $5, $6, $7
 //	) RETURNING (
 //	    id,
 //	    file_hash
 //	)
-func (q *Queries) InsertFile(ctx context.Context, arg *InsertFileParams) (interface{}, error) {
-	row := q.db.QueryRow(ctx, insertFile,
+func (q *Queries) InsertFile(ctx context.Context, db DBTX, arg *InsertFileParams) (interface{}, error) {
+	row := db.QueryRow(ctx, insertFile,
 		arg.PeerID,
 		arg.FileName,
 		arg.FilePath,

@@ -1,11 +1,11 @@
 CREATE TABLE IF NOT EXISTS peers_table (
     id serial PRIMARY KEY,
     peer_id uuid DEFAULT gen_random_uuid(),
-    ip_address TEXT NOT NULL,
+    ip_address TEXT NOT NULL UNIQUE,
     PEM BYTEA
 );
 
-CREATE TYPE file_status_type AS ENUM ('new','shared','deleted','updated');
+CREATE TYPE file_status_type AS ENUM ('new','deleted','updated');
 
 CREATE TABLE IF NOT EXISTS file_storage (
     id serial PRIMARY KEY,
@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS file_storage (
     file_name TEXT NOT NULL,
     file_path TEXT NOT NULL,
     file_type VARCHAR(7) NOT NULL,
-    file_hash VARCHAR(256) GENERATED ALWAYS AS (encode(sha256(file_data::bytea), 'hex')) STORED,
+    file_hash VARCHAR(256) GENERATED ALWAYS AS (encode(sha256(file_data::bytea), 'hex')) STORED UNIQUE,
     prev_file_hash VARCHAR(256) references file_storage(file_hash),
     creation timestamptz default NOW(),
     modification_date TIMESTAMP NOT NULL,

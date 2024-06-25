@@ -222,9 +222,9 @@ type TLSCert struct {
 	TlsCert tls.Certificate `json:"tls_cert"`
 }
 
-func GenerateTLSCert(ca_pem CAPem, X509_ x509.Certificate) (tls_cert TLSCert, err error) {
+func GenerateTLSCert(ca_pem *CAPem, X509_ x509.Certificate) (tls_cert *TLSCert, err error) {
 	loc := log_item.Loc("func GenerateTLSCert(ca_pem CAPem) (tls_cert TLSCert, err error)")
-	tls_cert = TLSCert{}
+	tls_cert = &TLSCert{}
 	// set up our server certificate
 	tls_cert.X509 = X509_
 

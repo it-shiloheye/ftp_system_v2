@@ -11,7 +11,7 @@ import (
 	// "github.com/jackc/pgx/v5/pgtype"
 )
 
-var DB_Conn = &pgx.Conn{}
+var DB_Conn *pgx.Conn
 var DB = &db_access.Queries{}
 
 var db_url string
@@ -24,23 +24,19 @@ func init() {
 
 }
 
-type void_func = func()
-
-func ConnectToDB(ctx ftp_context.Context) void_func {
-	DB_Conn, err := pgx.Connect(ctx, db_url)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Unable to connect to database: %v\n", err)
+func ConnectToDB(ctx ftp_context.Context) {
+	var err1 error
+	DB_Conn, err1 = pgx.Connect(ctx, db_url)
+	if err1 != nil {
+		fmt.Fprintf(os.Stderr, "Unable to connect to database: %v\n", err1)
 		os.Exit(1)
 	}
 
-	DB = NewDB(ctx)
-	log.Println("connected to: ", db_url)
-	return func() {
-		DB_Conn.Close(ctx)
+	DB = db_access.New()
+	if DB == nil {
+		log.Fatal("invalid db object")
 	}
-}
 
-func NewDB(ctx ftp_context.Context) *db_access.Queries {
+	log.Println("connected to: ", db_url)
 
-	return db_access.New(DB_Conn)
 }

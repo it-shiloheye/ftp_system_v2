@@ -16,7 +16,6 @@ type FileStatusType string
 
 const (
 	FileStatusTypeNew     FileStatusType = "new"
-	FileStatusTypeShared  FileStatusType = "shared"
 	FileStatusTypeDeleted FileStatusType = "deleted"
 	FileStatusTypeUpdated FileStatusType = "updated"
 )
