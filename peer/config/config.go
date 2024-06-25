@@ -6,13 +6,14 @@ import (
 	"os"
 	"time"
 
+	ftp_tlshandler "github.com/it-shiloheye/ftp_system_v2/lib/tls_handler/v2"
 	"github.com/joho/godotenv"
 )
 
 var ServerConfig = &ServerConfigStruct{}
 
 func init() {
-	ReadConfig()
+	ReadEnv()
 }
 
 type ServerConfigStruct struct {
@@ -21,13 +22,14 @@ type ServerConfigStruct struct {
 	PeerPort    string `json:"peer_port"`
 	BrowserPort string `json:"browser_port"`
 
-	CertsDirectory    string `json:"certs_dir"`
-	StorageDirectory  string `json:"storage_directory"`
-	DatabaseURL       string `json:"db_url"`
-	TLS_Cert_Creation time.Time
+	CertsDirectory    string    `json:"certs_dir"`
+	StorageDirectory  string    `json:"storage_directory"`
+	DatabaseURL       string    `json:"db_url"`
+	TLS_Cert_Creation time.Time `json:"cert_creation_time"`
+	TLS_Cert          *ftp_tlshandler.TLSCert
 }
 
-func ReadConfig() (err error) {
+func ReadEnv() (err error) {
 	ok := false
 	godotenv.Load()
 	ServerConfig.ServerId, ok = os.LookupEnv("SERVER_ID")

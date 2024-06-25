@@ -1,22 +1,23 @@
 package server
 
-import (
-	"encoding/json"
-	"errors"
-	"io/fs"
-	"log"
-	"net"
-	"os"
-	"time"
+import ( /*
+		"encoding/json"
+		"errors"
+		"io/fs"
+		"log"
+		"net"
+		"os"
+		"time"
 
-	ftp_base "github.com/it-shiloheye/ftp_system_v2/lib/base"
-	"github.com/it-shiloheye/ftp_system_v2/lib/logging/log_item"
-	ftp_tlshandler "github.com/it-shiloheye/ftp_system_v2/lib/tls_handler/v2"
+		ftp_base "github.com/it-shiloheye/ftp_system_v2/lib/base"
+		"github.com/it-shiloheye/ftp_system_v2/lib/logging/log_item"
+		ftp_tlshandler "github.com/it-shiloheye/ftp_system_v2/lib/tls_handler/v2" */
 	"github.com/it-shiloheye/ftp_system_v2/peer/config"
 )
 
 var ServerConfig = server_config.ServerConfig
 
+/*
 var C_loc = &CertsLocation{
 	CertsDirectory: ServerConfig.CertsDirectory,
 	caPem:          &ftp_tlshandler.CAPem{},
@@ -24,12 +25,7 @@ var C_loc = &CertsLocation{
 	tlsCert:        &ftp_tlshandler.TLSCert{},
 }
 
-type CertsLocation struct {
-	CertsDirectory string
-	cert_d         ftp_tlshandler.CertData
-	caPem          *ftp_tlshandler.CAPem
-	tlsCert        *ftp_tlshandler.TLSCert
-}
+
 
 func (c *CertsLocation) Cert() *ftp_tlshandler.TLSCert {
 	return c.tlsCert
@@ -68,7 +64,7 @@ func init() {
 		IPAddrresses: []net.IP{
 			net.IPv4(127, 0, 0, 1),
 			net.IPv6loopback,
-			server_config.ServerConfig.LocalIp().To4(),
+			ServerConfig.LocalIp().To4(),
 		},
 	}
 
@@ -188,7 +184,7 @@ func init() {
 
 	// generate new tls each time
 	x509_tls_cert := ftp_tlshandler.ExampleTLSCert(template_cd)
-	tmp, err3 := ftp_tlshandler.GenerateTLSCert(*C_loc.caPem, x509_tls_cert)
+	tmp, err3 := ftp_tlshandler.GenerateTLSCert(C_loc.caPem, x509_tls_cert)
 	if err3 != nil {
 		log.Fatalln(&log_item.LogItem{Location: loc, Time: time.Now(),
 
@@ -200,3 +196,4 @@ func init() {
 	*C_loc.tlsCert = tmp
 
 }
+*/

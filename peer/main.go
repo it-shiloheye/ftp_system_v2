@@ -23,16 +23,16 @@ func main() {
 	ctx := ftp_context.CreateNewContext()
 	log.Println("hello world from server")
 
-	close_db_conn := db.ConnectToDB(ctx)
+	db.ConnectToDB(ctx)
 
-	defer close_db_conn()
 	go logging.Logger.Engine(ctx, ServerConfig.StorageDirectory)
 
-	PeerSrv := networkpeer.CreatePeerServer()
+	PeerSrv := networkpeer.CreatePeerServer(ctx)
 	BrowserSrv := browserserver.CreateBrowserServer()
 	err_c := make(chan error)
 	go PeerSrv.ServerRun(ctx.Add(), err_c)
 	go BrowserSrv.ServerRun(ctx.Add(), err_c)
 
+	log.Println("\nBrowser: http://127.0.0.1"+ServerConfig.BrowserPort, "\nPeer: https://"+ServerConfig.LocalIp().String()+ServerConfig.PeerPort)
 	ctx.Wait()
 }

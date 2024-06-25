@@ -8,7 +8,7 @@ func TestServerLoop(ctx ftp_context.Context, port string) (ftp_err error) {
 	Srvr := ServerType{
 		Port: port,
 	}
-	Srvr.InitServer(C_loc.tlsCert)
+	Srvr.InitServer(ServerConfig.TLS_Cert)
 	err_c := make(chan error)
 	go Srvr.ServerRun(ctx.Add(), err_c)
 	defer ctx.Finished()

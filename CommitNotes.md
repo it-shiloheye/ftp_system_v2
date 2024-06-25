@@ -1,5 +1,76 @@
 # Commit Notes
 
+### 25th June 2024, 08:16 A, GMT +3
+```sh
+1. Database permissions sorted
+2. Able to create and store CA_pem in db 
+3. Next step is:
+    - to upload files into db
+    - work on config struct:
+        - store in db
+        - access throw browser
+# Please enter the commit message for your changes. Lines starting
+# with '#' will be ignored, and an empty message aborts the commit.
+#
+# On branch main
+# Your branch is up to date with 'origin/main'.
+#
+# Changes to be committed:
+#	modified:   .air.toml
+#	modified:   db_access/db_main.go
+#	modified:   db_access/generated/client_queries.sql.go
+#	modified:   db_access/generated/db.go
+#	modified:   db_access/generated/models.go
+#	modified:   db_access/sql/queries/client_queries.sql
+#	modified:   db_access/sql/schema/client_id.sql
+#	modified:   sqlc.yaml
+#	modified:   tls_handler/v2/cert_handler_2.go
+#
+# Changes not staged for commit:
+#	modified:   ../CommitNotes.md
+#	modified:   ../go.mod
+#	modified:   ../go.sum
+#	modified:   ../peer/.air.toml
+#	modified:   ../peer/browser-server/browser_server.go
+#	modified:   ../peer/config/config.go
+#	modified:   ../peer/main.go
+#	modified:   ../peer/network-peer/network_peer.go
+#	modified:   ../peer/server/init_server.go
+#	modified:   ../peer/server/server_loop.go
+#	modified:   ../peer/server/server_type.go
+#	deleted:    ../sqlc.yaml
+#
+# Untracked files:
+#	../peer/config/data_storage_struct.go
+#	../peer/main_thread/
+#
+```
+
+### 23rd June 2024, 19:25 PM GMT +3
+```sh
+1. Peer Server created successfully
+2. Browser Server created successfully
+3. Three steps:
+    => connect to db
+    => set up logging
+    => set up browser and peer servers
+# Please enter the commit message for your changes. Lines starting
+# with '#' will be ignored, and an empty message aborts the commit.
+#
+# On branch main
+# Your branch is ahead of 'origin/main' by 1 commit.
+#   (use "git push" to publish your local commits)
+#
+# Changes to be committed:
+#	new file:   peer/browser-server/browser_server.go
+#	modified:   peer/main.go
+#	modified:   peer/network-peer/network_peer.go
+#	modified:   peer/server/init_server.go
+#	modified:   peer/server/server_loop.go
+#	modified:   peer/server/server_type.go
+#
+```
+
 ### 23rd June 2024, 18:34 PM GMT +3
 ```sh
 1. Rewriting server and logging 

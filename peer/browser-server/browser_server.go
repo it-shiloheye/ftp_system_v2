@@ -6,7 +6,6 @@ import (
 )
 
 var ServerConfig = server_config.ServerConfig
-var C_loc = server.C_loc
 
 func CreateBrowserServer() *server.ServerType {
 
@@ -14,7 +13,7 @@ func CreateBrowserServer() *server.ServerType {
 		Port: ServerConfig.BrowserPort,
 	}
 
-	Srvr.InitServer(nil)
+	Srvr.InitServer(nil, "browser")
 
 	return Srvr
 

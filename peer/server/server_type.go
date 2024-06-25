@@ -23,9 +23,9 @@ type ServerType struct {
 	ServerRun func(ctx ftp_context.Context, err_c chan error)
 }
 
-func (st *ServerType) InitServer(server_cert *ftp_tlshandler.TLSCert) {
+func (st *ServerType) InitServer(server_cert *ftp_tlshandler.TLSCert, srv_name string) {
 
-	loc := log_item.Loc("gin_server_main_thread(ctx ftp_context.Context) (err log_item.LogErr)")
+	loc := log_item.Locf("func (st *ServerType) InitServer(server_cert *ftp_tlshandler.TLSCert, srv_name: %s) ", srv_name)
 
 	st.Engine = gin.Default()
 	r := st.Engine
@@ -58,8 +58,6 @@ func (st *ServerType) InitServer(server_cert *ftp_tlshandler.TLSCert) {
 		})
 	})
 
-	port := st.Port
-
 	st.HttpsServer = &http.Server{
 		Addr:    st.Port,
 		Handler: r,
@@ -70,9 +68,7 @@ func (st *ServerType) InitServer(server_cert *ftp_tlshandler.TLSCert) {
 
 	st.ServerRun = func(ctx ftp_context.Context, err_c chan error) {
 		defer ctx.Finished()
-		log.Println("Starting: gin_server_main_thread")
-
-		log.Println("\nhttp://127.0.0.1"+port, "\nhttps://"+ServerConfig.LocalIp().String()+port)
+		log.Println("Starting:", srv_name, "thread")
 
 		if st.HttpsServer.TLSConfig != nil {
 			if err_ := st.HttpsServer.ListenAndServeTLS("", ""); err_ != nil {
