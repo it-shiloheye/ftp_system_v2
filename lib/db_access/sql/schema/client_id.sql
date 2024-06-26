@@ -1,11 +1,20 @@
+
+
+CREATE TYPE file_status_type AS ENUM ('new','deleted','updated');
+CREATE TYPE peer_role_type AS ENUM (
+    'client', -- push changes to database
+    'storage', -- create a local copy of all files
+    'server'    -- c
+);
+
 CREATE TABLE IF NOT EXISTS peers_table (
     id serial PRIMARY KEY,
-    peer_id uuid DEFAULT gen_random_uuid(),
+    peer_id uuid DEFAULT gen_random_uuid() UNIQUE,
     ip_address TEXT NOT NULL UNIQUE,
+    peer_role peer_role_type,
     PEM BYTEA
 );
 
-CREATE TYPE file_status_type AS ENUM ('new','deleted','updated');
 
 CREATE TABLE IF NOT EXISTS file_storage (
     id serial PRIMARY KEY,

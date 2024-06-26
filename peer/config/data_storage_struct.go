@@ -5,7 +5,6 @@ import (
 	"os"
 	"time"
 
-	
 	ftp_base "github.com/it-shiloheye/ftp_system_v2/lib/base"
 	"github.com/jackc/pgx/v5/pgtype"
 
@@ -15,17 +14,15 @@ import (
 
 var Logger = logging.Logger
 
-var StorageSingleton = NewStorageStruct()
-
 type StorageStruct struct {
-	PeerId          pgtype.UUID      `json:"peer_id"`
-	IncludeDirs     []string         `json:"include_dirs"`
-	ExcludeDirs     []string         `json:"exclude_dirs"`
-	IncludeFiles    []string         `json:"include_files"`
-	ExcludeRegex    []string         `json:"exclude_regex"`
-	IncludeRegex    []string         `json:"include_regex"`
-	PollInterval    time.Duration    `json:"poll_interval"`
-	SubscribedPeers []SubscribePeers `json:"subscribed_peers"`
+	PeerId          pgtype.UUID       `json:"peer_id"`
+	IncludeDirs     []string          `json:"include_dirs"`
+	ExcludeDirs     []string          `json:"exclude_dirs"`
+	IncludeFiles    []string          `json:"include_files"`
+	ExcludeRegex    []string          `json:"exclude_regex"`
+	IncludeRegex    []string          `json:"include_regex"`
+	PollInterval    time.Duration     `json:"poll_interval"`
+	SubscribedPeers []*SubscribePeers `json:"subscribed_peers"`
 }
 
 type SubscribePeers struct {
@@ -44,7 +41,7 @@ func NewStorageStruct() (sts *StorageStruct) {
 		ExcludeRegex:    []string{},
 		IncludeRegex:    []string{},
 		PollInterval:    time.Minute * 5,
-		SubscribedPeers: []SubscribePeers{},
+		SubscribedPeers: []*SubscribePeers{},
 	}
 
 	return

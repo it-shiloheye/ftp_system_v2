@@ -55,6 +55,49 @@ func (ns NullFileStatusType) Value() (driver.Value, error) {
 	return string(ns.FileStatusType), nil
 }
 
+type PeerRoleType string
+
+const (
+	PeerRoleTypeClient  PeerRoleType = "client"
+	PeerRoleTypeStorage PeerRoleType = "storage"
+	PeerRoleTypeServer  PeerRoleType = "server"
+)
+
+func (e *PeerRoleType) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = PeerRoleType(s)
+	case string:
+		*e = PeerRoleType(s)
+	default:
+		return fmt.Errorf("unsupported scan type for PeerRoleType: %T", src)
+	}
+	return nil
+}
+
+type NullPeerRoleType struct {
+	PeerRoleType PeerRoleType `json:"peer_role_type"`
+	Valid        bool         `json:"valid"` // Valid is true if PeerRoleType is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullPeerRoleType) Scan(value interface{}) error {
+	if value == nil {
+		ns.PeerRoleType, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.PeerRoleType.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullPeerRoleType) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.PeerRoleType), nil
+}
+
 type FileStorage struct {
 	ID               int32              `json:"id"`
 	PeerID           uuid.UUID          `json:"peer_id"`
@@ -70,8 +113,9 @@ type FileStorage struct {
 }
 
 type PeersTable struct {
-	ID        int32       `json:"id"`
-	PeerID    pgtype.UUID `json:"peer_id"`
-	IpAddress string      `json:"ip_address"`
-	Pem       []byte      `json:"pem"`
+	ID        int32            `json:"id"`
+	PeerID    pgtype.UUID      `json:"peer_id"`
+	IpAddress string           `json:"ip_address"`
+	PeerRole  NullPeerRoleType `json:"peer_role"`
+	Pem       []byte           `json:"pem"`
 }

@@ -7,6 +7,8 @@ import (
 	"time"
 
 	ftp_tlshandler "github.com/it-shiloheye/ftp_system_v2/lib/tls_handler/v2"
+
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/joho/godotenv"
 )
 
@@ -17,7 +19,7 @@ func init() {
 }
 
 type ServerConfigStruct struct {
-	ServerId string `json:"server_id"`
+	PeerId pgtype.UUID `json:"peer_id"`
 
 	PeerPort    string `json:"peer_port"`
 	BrowserPort string `json:"browser_port"`
@@ -32,10 +34,7 @@ type ServerConfigStruct struct {
 func ReadEnv() (err error) {
 	ok := false
 	godotenv.Load()
-	ServerConfig.ServerId, ok = os.LookupEnv("SERVER_ID")
-	if !ok || len(ServerConfig.ServerId) < 1 {
-		log.Println(`"SERVER_ID" missing from .env`)
-	}
+
 	ServerConfig.PeerPort, ok = os.LookupEnv("PEER_PORT")
 	if !ok || len(ServerConfig.PeerPort) < 1 {
 		log.Fatalln(`Fatal "PEER_PORT" missing from .env`)

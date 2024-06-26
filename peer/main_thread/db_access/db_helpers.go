@@ -20,7 +20,7 @@ import (
 
 var DB = db.DB
 var ServerConfig = server_config.ServerConfig
-var Storage = server_config.StorageSingleton
+
 var Logger = logging.Logger
 
 func ticker(loc log_item.Loc, i int, v ...any) {
@@ -29,28 +29,26 @@ func ticker(loc log_item.Loc, i int, v ...any) {
 
 func ConnectClient(ctx ftp_context.Context) error {
 	loc := log_item.Loc(`ConnectClient(ctx ftp_context.Context) error`)
-	var err1, err2, err3, err4, err5, err6, err7 error
+	var err1, err3, err4, err5, err6, err7 error
 	var db_peers []*db_access.PeersTable
+	if db.DBPool.Len() < 10 {
+		// log.Println("connect client checking length")
+		db.DBPool.PopulateConns(ctx.Add(), 10)
+		ctx.Finished()
+	}
 
-	if DB == nil {
-		log.Fatalln("DB pointer is nil")
-	}
-	if ServerConfig == nil {
-		log.Fatalln("ServerConfig is nil")
-	}
+	db_conn := db.DBPool.GetConn()
+	defer db.DBPool.Return(db_conn)
 
 	ip_addr := ServerConfig.LocalIp()
-	if ip_addr == nil {
-		log.Fatalln("ip address missing")
-	}
 
-	ticker(loc, 1, "before query")
-	db_peers, err1 = DB.ConnectClient(context.TODO(), db.DB_Conn, ip_addr.String())
+	// ticker(loc, 1, "before query")
+	db_peers, err1 = DB.ConnectClient(context.TODO(), db_conn, ip_addr.String())
 	if err1 != nil {
 		return Logger.LogErr(loc, err1)
 	}
 
-	ticker(loc, 2, "before template_cd")
+	// ticker(loc, 2, "before template_cd")
 	template_cd := ftp_tlshandler.CertData{
 		Organization:  "Shiloh Eye, Ltd",
 		Country:       "KE",
@@ -69,14 +67,15 @@ func ConnectClient(ctx ftp_context.Context) error {
 	}
 
 	if len(db_peers) > 0 {
-		ticker(loc, 3, "need to decode PEM")
+		// ticker(loc, 3, "need to decode PEM")
 		db_peer := db_peers[0]
-		Storage.PeerId = db_peer.PeerID
-		log.Println("db_peers exists")
+		ServerConfig.PeerId = db_peer.PeerID
+
 		tmp_ca_pem := ftp_tlshandler.CAPem{}
 
-		err2 = json.Unmarshal(db_peer.Pem, &tmp_ca_pem)
+		err2 := json.Unmarshal(db_peer.Pem, &tmp_ca_pem)
 		if err2 != nil {
+			log.Println(err2)
 			return Logger.LogErr(loc, err2)
 		}
 
@@ -88,6 +87,7 @@ func ConnectClient(ctx ftp_context.Context) error {
 			return Logger.LogErr(loc, err3)
 		}
 
+		log.Println("succeffully loaded pem from database")
 		return nil
 	}
 	log.Println("registering new client to db")
@@ -105,22 +105,21 @@ func ConnectClient(ctx ftp_context.Context) error {
 	// generate new tls each time
 	x509_tls_cert := ftp_tlshandler.ExampleTLSCert(template_cd)
 
-	ticker(loc, 4, "before tls")
+	// ticker(loc, 4, "before tls")
 	ServerConfig.TLS_Cert, err5 = ftp_tlshandler.GenerateTLSCert(&tmp_ca_pem, x509_tls_cert)
 	if err5 != nil {
 		return Logger.LogErr(loc, err5)
 	}
-	ticker(loc, 5, "before encoding to ca_pem")
+	// ticker(loc, 5, "before encoding to ca_pem")
 
 	var d []byte
 	d, err6 = json.Marshal(&tmp_ca_pem)
 	if err6 != nil {
 		return Logger.LogErr(loc, err6)
 	}
-
 	var tmp_peerids []pgtype.UUID
 
-	tmp_peerids, err7 = DB.CreateClient(ctx, db.DB_Conn, &db_access.CreateClientParams{
+	tmp_peerids, err7 = DB.CreateClient(ctx, db_conn, &db_access.CreateClientParams{
 		IpAddress: ip_addr.String(),
 		Pem:       d,
 	})
@@ -128,7 +127,23 @@ func ConnectClient(ctx ftp_context.Context) error {
 		return Logger.LogErr(loc, err7)
 	}
 
-	Storage.PeerId = tmp_peerids[0]
+	ServerConfig.PeerId = tmp_peerids[0]
 
 	return nil
+}
+
+func GetFiles(ctx ftp_context.Context, StorageStruct *server_config.StorageStruct) ([]*db_access.GetFilesRow, error) {
+	loc := log_item.Locf(`func GetFiles(ctx ftp_context.Context, StorageStruct: %v) error `, StorageStruct.PeerId.Bytes)
+	conn := db.DBPool.GetConn()
+	defer db.DBPool.Return(conn)
+
+	log.Println("before DB.GetFiles")
+	defer log.Println("after DB.GetFiles")
+	f, err1 := DB.GetFiles(ctx, conn, StorageStruct.PeerId.Bytes)
+	if err1 != nil {
+
+		return nil, Logger.LogErr(loc, err1)
+	}
+
+	return f, nil
 }

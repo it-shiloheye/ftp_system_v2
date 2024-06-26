@@ -13,14 +13,14 @@ import (
 )
 
 const connectClient = `-- name: ConnectClient :many
-SELECT id, peer_id, ip_address, pem FROM peers_table
+SELECT id, peer_id, ip_address, peer_role, pem FROM peers_table
 WHERE ip_address = $1
 LIMIT 1
 `
 
 // ConnectClient
 //
-//	SELECT id, peer_id, ip_address, pem FROM peers_table
+//	SELECT id, peer_id, ip_address, peer_role, pem FROM peers_table
 //	WHERE ip_address = $1
 //	LIMIT 1
 func (q *Queries) ConnectClient(ctx context.Context, db DBTX, ipAddress string) ([]*PeersTable, error) {
@@ -36,6 +36,7 @@ func (q *Queries) ConnectClient(ctx context.Context, db DBTX, ipAddress string) 
 			&i.ID,
 			&i.PeerID,
 			&i.IpAddress,
+			&i.PeerRole,
 			&i.Pem,
 		); err != nil {
 			return nil, err
@@ -112,37 +113,43 @@ func (q *Queries) GetAllPem(ctx context.Context, db DBTX) ([][]byte, error) {
 }
 
 const getFileData = `-- name: GetFileData :many
-SELECT (
+SELECT 
     peer_id,
     file_state,
     file_data
-) FROM file_storage 
+FROM file_storage 
 WHERE file_hash = $1
 LIMIT 1
 `
 
+type GetFileDataRow struct {
+	PeerID    uuid.UUID          `json:"peer_id"`
+	FileState NullFileStatusType `json:"file_state"`
+	FileData  []byte             `json:"file_data"`
+}
+
 // GetFileData
 //
-//	SELECT (
+//	SELECT
 //	    peer_id,
 //	    file_state,
 //	    file_data
-//	) FROM file_storage
+//	FROM file_storage
 //	WHERE file_hash = $1
 //	LIMIT 1
-func (q *Queries) GetFileData(ctx context.Context, db DBTX, fileHash *string) ([]interface{}, error) {
+func (q *Queries) GetFileData(ctx context.Context, db DBTX, fileHash *string) ([]*GetFileDataRow, error) {
 	rows, err := db.Query(ctx, getFileData, fileHash)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []interface{}{}
+	items := []*GetFileDataRow{}
 	for rows.Next() {
-		var column_1 interface{}
-		if err := rows.Scan(&column_1); err != nil {
+		var i GetFileDataRow
+		if err := rows.Scan(&i.PeerID, &i.FileState, &i.FileData); err != nil {
 			return nil, err
 		}
-		items = append(items, column_1)
+		items = append(items, &i)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -151,7 +158,7 @@ func (q *Queries) GetFileData(ctx context.Context, db DBTX, fileHash *string) ([
 }
 
 const getFiles = `-- name: GetFiles :many
-SELECT (
+SELECT 
     file_name,
     file_path,
     file_type,
@@ -159,13 +166,23 @@ SELECT (
     file_state,
     file_hash,
     prev_file_hash
-) FROM file_storage 
+ FROM file_storage 
 WHERE peer_id = $1
 `
 
+type GetFilesRow struct {
+	FileName         string             `json:"file_name"`
+	FilePath         string             `json:"file_path"`
+	FileType         string             `json:"file_type"`
+	ModificationDate pgtype.Timestamp   `json:"modification_date"`
+	FileState        NullFileStatusType `json:"file_state"`
+	FileHash         *string            `json:"file_hash"`
+	PrevFileHash     *string            `json:"prev_file_hash"`
+}
+
 // GetFiles
 //
-//	SELECT (
+//	SELECT
 //	    file_name,
 //	    file_path,
 //	    file_type,
@@ -173,21 +190,29 @@ WHERE peer_id = $1
 //	    file_state,
 //	    file_hash,
 //	    prev_file_hash
-//	) FROM file_storage
+//	 FROM file_storage
 //	WHERE peer_id = $1
-func (q *Queries) GetFiles(ctx context.Context, db DBTX, peerID uuid.UUID) ([]interface{}, error) {
+func (q *Queries) GetFiles(ctx context.Context, db DBTX, peerID uuid.UUID) ([]*GetFilesRow, error) {
 	rows, err := db.Query(ctx, getFiles, peerID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []interface{}{}
+	items := []*GetFilesRow{}
 	for rows.Next() {
-		var column_1 interface{}
-		if err := rows.Scan(&column_1); err != nil {
+		var i GetFilesRow
+		if err := rows.Scan(
+			&i.FileName,
+			&i.FilePath,
+			&i.FileType,
+			&i.ModificationDate,
+			&i.FileState,
+			&i.FileHash,
+			&i.PrevFileHash,
+		); err != nil {
 			return nil, err
 		}
-		items = append(items, column_1)
+		items = append(items, &i)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -206,10 +231,9 @@ INSERT INTO file_storage (
     file_data
 ) VALUES ( 
     $1, $2, $3, $4, $5, $6, $7
-) RETURNING (
+) RETURNING 
     id,
     file_hash
-)
 `
 
 type InsertFileParams struct {
@@ -220,6 +244,11 @@ type InsertFileParams struct {
 	ModificationDate pgtype.Timestamp   `json:"modification_date"`
 	FileState        NullFileStatusType `json:"file_state"`
 	FileData         []byte             `json:"file_data"`
+}
+
+type InsertFileRow struct {
+	ID       int32   `json:"id"`
+	FileHash *string `json:"file_hash"`
 }
 
 // InsertFile
@@ -234,11 +263,10 @@ type InsertFileParams struct {
 //	    file_data
 //	) VALUES (
 //	    $1, $2, $3, $4, $5, $6, $7
-//	) RETURNING (
+//	) RETURNING
 //	    id,
 //	    file_hash
-//	)
-func (q *Queries) InsertFile(ctx context.Context, db DBTX, arg *InsertFileParams) (interface{}, error) {
+func (q *Queries) InsertFile(ctx context.Context, db DBTX, arg *InsertFileParams) (*InsertFileRow, error) {
 	row := db.QueryRow(ctx, insertFile,
 		arg.PeerID,
 		arg.FileName,
@@ -248,7 +276,7 @@ func (q *Queries) InsertFile(ctx context.Context, db DBTX, arg *InsertFileParams
 		arg.FileState,
 		arg.FileData,
 	)
-	var column_1 interface{}
-	err := row.Scan(&column_1)
-	return column_1, err
+	var i InsertFileRow
+	err := row.Scan(&i.ID, &i.FileHash)
+	return &i, err
 }

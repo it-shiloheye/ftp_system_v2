@@ -1,5 +1,5 @@
 -- name: GetFiles :many
-SELECT (
+SELECT 
     file_name,
     file_path,
     file_type,
@@ -7,7 +7,7 @@ SELECT (
     file_state,
     file_hash,
     prev_file_hash
-) FROM file_storage 
+ FROM file_storage 
 WHERE peer_id = $1;
 
 -- name: InsertFile :one
@@ -21,18 +21,18 @@ INSERT INTO file_storage (
     file_data
 ) VALUES ( 
     $1, $2, $3, $4, $5, $6, $7
-) RETURNING (
+) RETURNING 
     id,
     file_hash
-);
+;
 
 
 -- name: GetFileData :many
-SELECT (
+SELECT 
     peer_id,
     file_state,
     file_data
-) FROM file_storage 
+FROM file_storage 
 WHERE file_hash = $1
 LIMIT 1;
 
