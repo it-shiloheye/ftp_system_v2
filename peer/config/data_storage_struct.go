@@ -3,9 +3,11 @@ package server_config
 import (
 	"encoding/json"
 	"os"
+	"sync"
 	"time"
 
 	ftp_base "github.com/it-shiloheye/ftp_system_v2/lib/base"
+	db_access "github.com/it-shiloheye/ftp_system_v2/lib/db_access/generated"
 	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/it-shiloheye/ftp_system_v2/lib/logging"
@@ -15,33 +17,52 @@ import (
 var Logger = logging.Logger
 
 type StorageStruct struct {
-	PeerId          pgtype.UUID       `json:"peer_id"`
-	IncludeDirs     []string          `json:"include_dirs"`
-	ExcludeDirs     []string          `json:"exclude_dirs"`
-	IncludeFiles    []string          `json:"include_files"`
-	ExcludeRegex    []string          `json:"exclude_regex"`
-	IncludeRegex    []string          `json:"include_regex"`
-	PollInterval    time.Duration     `json:"poll_interval"`
-	SubscribedPeers []*SubscribePeers `json:"subscribed_peers"`
+	sync.RWMutex
+
+	PeerId           pgtype.UUID            `json:"peer_id"`
+	PeerRole         db_access.PeerRoleType `json:"peer_role"`
+	StorageDirectory string                 `json:"storage_directory"`
+	IncludeDirs      []string               `json:"include_dirs"`
+	ExcludeDirs      []string               `json:"exclude_dirs"`
+	IncludeFiles     []string               `json:"include_files"`
+	ExcludeRegex     []string               `json:"exclude_regex"`
+	IncludeRegex     []string               `json:"include_regex"`
+	OnUpload         OnUploadStruct         `json:"on_upload"`
+	PollInterval     time.Duration          `json:"poll_interval"`
+	SubscribedPeers  []*SubscribePeers      `json:"subscribed_peers"`
 }
 
+type OnUploadStruct struct {
+	DeleteOnUpload           bool `json:"delete_on_upload"`
+	MaxAgeInDaysBeforeDelete int  `json:"max_age_in_days_before_delete"`
+}
 type SubscribePeers struct {
-	PeerUuid               string `json:"peer_uuid"`
-	CopyDirectoryStructure bool   `json:"copy_directory_structure"`
-	LocalName              string `json:"local_name"`
-	PublishOnEdits         string `json:"publish_on_edits"`
-	CascadeDeletes         string `json:"cascade_deletes"`
+	PeerUuid               pgtype.UUID `json:"peer_uuid"`
+	CopyDirectoryStructure bool        `json:"copy_directory_structure"`
+	LocalName              string      `json:"local_name"`
+	PublishOnEdits         string      `json:"publish_on_edits"`
+	CascadeDeletes         string      `json:"cascade_deletes"`
+	DownloadOnChanges      string      `json:"download_on_changes"`
 }
 
 func NewStorageStruct() (sts *StorageStruct) {
 	sts = &StorageStruct{
-		IncludeDirs:     []string{},
-		ExcludeDirs:     []string{},
-		IncludeFiles:    []string{},
-		ExcludeRegex:    []string{},
-		IncludeRegex:    []string{},
-		PollInterval:    time.Minute * 5,
-		SubscribedPeers: []*SubscribePeers{},
+		IncludeDirs:      []string{},
+		PeerRole:         db_access.PeerRoleTypeClient,
+		StorageDirectory: "./data",
+		ExcludeDirs:      []string{".git", "tmp", "~"},
+		IncludeFiles:     []string{},
+		ExcludeRegex:     []string{},
+		IncludeRegex:     []string{},
+		PollInterval:     time.Minute * 5,
+		SubscribedPeers: []*SubscribePeers{{
+			CopyDirectoryStructure: true,
+			LocalName:              "test",
+		}},
+		OnUpload: OnUploadStruct{
+			DeleteOnUpload:           false,
+			MaxAgeInDaysBeforeDelete: -1,
+		},
 	}
 
 	return

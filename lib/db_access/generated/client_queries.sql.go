@@ -13,18 +13,31 @@ import (
 )
 
 const connectClient = `-- name: ConnectClient :many
-SELECT id, peer_id, ip_address, peer_role, pem FROM peers_table
-WHERE ip_address = $1
+SELECT id, peer_id, ip_address, peer_role, peer_name, pem FROM peers_table
+WHERE (
+     ip_address = $1
+     AND 
+     peer_id = $2
+)
 LIMIT 1
 `
 
+type ConnectClientParams struct {
+	IpAddress string      `json:"ip_address"`
+	PeerID    pgtype.UUID `json:"peer_id"`
+}
+
 // ConnectClient
 //
-//	SELECT id, peer_id, ip_address, peer_role, pem FROM peers_table
-//	WHERE ip_address = $1
+//	SELECT id, peer_id, ip_address, peer_role, peer_name, pem FROM peers_table
+//	WHERE (
+//	     ip_address = $1
+//	     AND
+//	     peer_id = $2
+//	)
 //	LIMIT 1
-func (q *Queries) ConnectClient(ctx context.Context, db DBTX, ipAddress string) ([]*PeersTable, error) {
-	rows, err := db.Query(ctx, connectClient, ipAddress)
+func (q *Queries) ConnectClient(ctx context.Context, db DBTX, arg *ConnectClientParams) ([]*PeersTable, error) {
+	rows, err := db.Query(ctx, connectClient, arg.IpAddress, arg.PeerID)
 	if err != nil {
 		return nil, err
 	}
@@ -37,6 +50,7 @@ func (q *Queries) ConnectClient(ctx context.Context, db DBTX, ipAddress string) 
 			&i.PeerID,
 			&i.IpAddress,
 			&i.PeerRole,
+			&i.PeerName,
 			&i.Pem,
 		); err != nil {
 			return nil, err
@@ -49,35 +63,134 @@ func (q *Queries) ConnectClient(ctx context.Context, db DBTX, ipAddress string) 
 	return items, nil
 }
 
+const countIfStored = `-- name: CountIfStored :one
+SELECT COUNT(*) FROM file_storage
+WHERE 
+    (
+        file_hash = $1
+        OR 
+        prev_file_hash = $1
+    )
+AND
+    file_state = 'stored'
+`
+
+// CountIfStored
+//
+//	SELECT COUNT(*) FROM file_storage
+//	WHERE
+//	    (
+//	        file_hash = $1
+//	        OR
+//	        prev_file_hash = $1
+//	    )
+//	AND
+//	    file_state = 'stored'
+func (q *Queries) CountIfStored(ctx context.Context, db DBTX, fileHash *string) (int64, error) {
+	row := db.QueryRow(ctx, countIfStored, fileHash)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createClient = `-- name: CreateClient :many
-INSERT INTO peers_table(peer_id,ip_address, PEM )
-VALUES  (default,$1, $2)
-RETURNING (peer_id)
+INSERT INTO peers_table(peer_id,ip_address, PEM,peer_role)
+VALUES  (default,$1, $2,$3)
+RETURNING id, peer_id, ip_address, peer_role, peer_name, pem
 `
 
 type CreateClientParams struct {
-	IpAddress string `json:"ip_address"`
-	Pem       []byte `json:"pem"`
+	IpAddress string           `json:"ip_address"`
+	Pem       []byte           `json:"pem"`
+	PeerRole  NullPeerRoleType `json:"peer_role"`
 }
 
 // CreateClient
 //
-//	INSERT INTO peers_table(peer_id,ip_address, PEM )
-//	VALUES  (default,$1, $2)
-//	RETURNING (peer_id)
-func (q *Queries) CreateClient(ctx context.Context, db DBTX, arg *CreateClientParams) ([]pgtype.UUID, error) {
-	rows, err := db.Query(ctx, createClient, arg.IpAddress, arg.Pem)
+//	INSERT INTO peers_table(peer_id,ip_address, PEM,peer_role)
+//	VALUES  (default,$1, $2,$3)
+//	RETURNING id, peer_id, ip_address, peer_role, peer_name, pem
+func (q *Queries) CreateClient(ctx context.Context, db DBTX, arg *CreateClientParams) ([]*PeersTable, error) {
+	rows, err := db.Query(ctx, createClient, arg.IpAddress, arg.Pem, arg.PeerRole)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []pgtype.UUID{}
+	items := []*PeersTable{}
 	for rows.Next() {
-		var peer_id pgtype.UUID
-		if err := rows.Scan(&peer_id); err != nil {
+		var i PeersTable
+		if err := rows.Scan(
+			&i.ID,
+			&i.PeerID,
+			&i.IpAddress,
+			&i.PeerRole,
+			&i.PeerName,
+			&i.Pem,
+		); err != nil {
 			return nil, err
 		}
-		items = append(items, peer_id)
+		items = append(items, &i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const downloadFiles = `-- name: DownloadFiles :many
+SELECT
+    file_hash,
+    file_name,
+    file_data,
+    modification_date
+FROM file_storage
+WHERE 
+    peer_id = $1
+    AND
+    file_state != 'deleted'
+    AND
+    file_data IS NOT NULL
+`
+
+type DownloadFilesRow struct {
+	FileHash         *string          `json:"file_hash"`
+	FileName         string           `json:"file_name"`
+	FileData         []byte           `json:"file_data"`
+	ModificationDate pgtype.Timestamp `json:"modification_date"`
+}
+
+// DownloadFiles
+//
+//	SELECT
+//	    file_hash,
+//	    file_name,
+//	    file_data,
+//	    modification_date
+//	FROM file_storage
+//	WHERE
+//	    peer_id = $1
+//	    AND
+//	    file_state != 'deleted'
+//	    AND
+//	    file_data IS NOT NULL
+func (q *Queries) DownloadFiles(ctx context.Context, db DBTX, peerID uuid.UUID) ([]*DownloadFilesRow, error) {
+	rows, err := db.Query(ctx, downloadFiles, peerID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []*DownloadFilesRow{}
+	for rows.Next() {
+		var i DownloadFilesRow
+		if err := rows.Scan(
+			&i.FileHash,
+			&i.FileName,
+			&i.FileData,
+			&i.ModificationDate,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, &i)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -86,12 +199,12 @@ func (q *Queries) CreateClient(ctx context.Context, db DBTX, arg *CreateClientPa
 }
 
 const getAllPem = `-- name: GetAllPem :many
-SELECT (pem) FROM peers_table
+SELECT pem FROM peers_table
 `
 
 // GetAllPem
 //
-//	SELECT (pem) FROM peers_table
+//	SELECT pem FROM peers_table
 func (q *Queries) GetAllPem(ctx context.Context, db DBTX) ([][]byte, error) {
 	rows, err := db.Query(ctx, getAllPem)
 	if err != nil {
@@ -110,6 +223,22 @@ func (q *Queries) GetAllPem(ctx context.Context, db DBTX) ([][]byte, error) {
 		return nil, err
 	}
 	return items, nil
+}
+
+const getCountOfStoragePeers = `-- name: GetCountOfStoragePeers :one
+SELECT COUNT(*) FROM peers_table 
+WHERE peer_role = 'storage'
+`
+
+// GetCountOfStoragePeers
+//
+//	SELECT COUNT(*) FROM peers_table
+//	WHERE peer_role = 'storage'
+func (q *Queries) GetCountOfStoragePeers(ctx context.Context, db DBTX) (int64, error) {
+	row := db.QueryRow(ctx, getCountOfStoragePeers)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
 }
 
 const getFileData = `-- name: GetFileData :many
@@ -168,6 +297,7 @@ SELECT
     prev_file_hash
  FROM file_storage 
 WHERE peer_id = $1
+ORDER BY modification_date DESC
 `
 
 type GetFilesRow struct {
@@ -192,6 +322,7 @@ type GetFilesRow struct {
 //	    prev_file_hash
 //	 FROM file_storage
 //	WHERE peer_id = $1
+//	ORDER BY modification_date DESC
 func (q *Queries) GetFiles(ctx context.Context, db DBTX, peerID uuid.UUID) ([]*GetFilesRow, error) {
 	rows, err := db.Query(ctx, getFiles, peerID)
 	if err != nil {
@@ -224,7 +355,7 @@ const insertFile = `-- name: InsertFile :one
 INSERT INTO file_storage (
     peer_id,
     file_name,
-    file_path,
+    file_path, 
     file_type,
     modification_date,
     file_state,
@@ -279,4 +410,98 @@ func (q *Queries) InsertFile(ctx context.Context, db DBTX, arg *InsertFileParams
 	var i InsertFileRow
 	err := row.Scan(&i.ID, &i.FileHash)
 	return &i, err
+}
+
+const markFileDeleted = `-- name: MarkFileDeleted :exec
+UPDATE file_storage
+SET 
+    file_state = 'deleted'
+WHERE
+    peer_id = $1
+    AND 
+    file_hash = $2
+    AND 
+    file_state != 'deleted'
+`
+
+type MarkFileDeletedParams struct {
+	PeerID   uuid.UUID `json:"peer_id"`
+	FileHash *string   `json:"file_hash"`
+}
+
+// MarkFileDeleted
+//
+//	UPDATE file_storage
+//	SET
+//	    file_state = 'deleted'
+//	WHERE
+//	    peer_id = $1
+//	    AND
+//	    file_hash = $2
+//	    AND
+//	    file_state != 'deleted'
+func (q *Queries) MarkFileDeleted(ctx context.Context, db DBTX, arg *MarkFileDeletedParams) error {
+	_, err := db.Exec(ctx, markFileDeleted, arg.PeerID, arg.FileHash)
+	return err
+}
+
+const updateFileLog = `-- name: UpdateFileLog :exec
+INSERT  INTO file_log (
+    peer_id,
+    file_hash,
+    current_file_status,
+    old_file_status 
+) VALUES 
+    ($1, $2, $3, $4)
+`
+
+type UpdateFileLogParams struct {
+	PeerID            uuid.UUID          `json:"peer_id"`
+	FileHash          string             `json:"file_hash"`
+	CurrentFileStatus NullFileStatusType `json:"current_file_status"`
+	OldFileStatus     NullFileStatusType `json:"old_file_status"`
+}
+
+// UpdateFileLog
+//
+//	INSERT  INTO file_log (
+//	    peer_id,
+//	    file_hash,
+//	    current_file_status,
+//	    old_file_status
+//	) VALUES
+//	    ($1, $2, $3, $4)
+func (q *Queries) UpdateFileLog(ctx context.Context, db DBTX, arg *UpdateFileLogParams) error {
+	_, err := db.Exec(ctx, updateFileLog,
+		arg.PeerID,
+		arg.FileHash,
+		arg.CurrentFileStatus,
+		arg.OldFileStatus,
+	)
+	return err
+}
+
+const updatePeerRole = `-- name: UpdatePeerRole :exec
+UPDATE peers_table
+SET 
+    peer_role = $2
+WHERE 
+    peer_id = $1
+`
+
+type UpdatePeerRoleParams struct {
+	PeerID   pgtype.UUID      `json:"peer_id"`
+	PeerRole NullPeerRoleType `json:"peer_role"`
+}
+
+// UpdatePeerRole
+//
+//	UPDATE peers_table
+//	SET
+//	    peer_role = $2
+//	WHERE
+//	    peer_id = $1
+func (q *Queries) UpdatePeerRole(ctx context.Context, db DBTX, arg *UpdatePeerRoleParams) error {
+	_, err := db.Exec(ctx, updatePeerRole, arg.PeerID, arg.PeerRole)
+	return err
 }

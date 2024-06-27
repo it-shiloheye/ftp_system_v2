@@ -4,6 +4,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	ftp_context "github.com/it-shiloheye/ftp_system_v2/lib/context"
@@ -59,8 +60,10 @@ func (st *ServerType) InitServer(server_cert *ftp_tlshandler.TLSCert, srv_name s
 	})
 
 	st.HttpsServer = &http.Server{
-		Addr:    st.Port,
-		Handler: r,
+		Addr:              st.Port,
+		Handler:           r,
+		ReadHeaderTimeout: time.Millisecond,
+		ReadTimeout:       time.Minute * 5,
 	}
 	if server_cert != nil {
 		st.HttpsServer.TLSConfig = ftp_tlshandler.ServerTLSConf(server_cert.TlsCert)

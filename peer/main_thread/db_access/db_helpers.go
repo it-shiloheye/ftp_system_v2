@@ -15,7 +15,6 @@ import (
 	"github.com/it-shiloheye/ftp_system_v2/lib/logging/log_item"
 	ftp_tlshandler "github.com/it-shiloheye/ftp_system_v2/lib/tls_handler/v2"
 	server_config "github.com/it-shiloheye/ftp_system_v2/peer/config"
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 var DB = db.DB
@@ -27,7 +26,7 @@ func ticker(loc log_item.Loc, i int, v ...any) {
 	log.Printf("%s\n%03d: %s\n", string(loc), i, fmt.Sprint(v...))
 }
 
-func ConnectClient(ctx ftp_context.Context) error {
+func ConnectClient(ctx ftp_context.Context, StorageStruct *server_config.StorageStruct) error {
 	loc := log_item.Loc(`ConnectClient(ctx ftp_context.Context) error`)
 	var err1, err3, err4, err5, err6, err7 error
 	var db_peers []*db_access.PeersTable
@@ -43,7 +42,10 @@ func ConnectClient(ctx ftp_context.Context) error {
 	ip_addr := ServerConfig.LocalIp()
 
 	// ticker(loc, 1, "before query")
-	db_peers, err1 = DB.ConnectClient(context.TODO(), db_conn, ip_addr.String())
+	db_peers, err1 = DB.ConnectClient(context.TODO(), db_conn, &db_access.ConnectClientParams{
+		IpAddress: ip_addr.String(),
+		PeerID:    StorageStruct.PeerId,
+	})
 	if err1 != nil {
 		return Logger.LogErr(loc, err1)
 	}
@@ -117,17 +119,20 @@ func ConnectClient(ctx ftp_context.Context) error {
 	if err6 != nil {
 		return Logger.LogErr(loc, err6)
 	}
-	var tmp_peerids []pgtype.UUID
 
-	tmp_peerids, err7 = DB.CreateClient(ctx, db_conn, &db_access.CreateClientParams{
+	tmp_peerids, err7 := DB.CreateClient(ctx, db_conn, &db_access.CreateClientParams{
 		IpAddress: ip_addr.String(),
 		Pem:       d,
+		PeerRole:  db_access.NullPeerRoleType{PeerRoleType: StorageStruct.PeerRole, Valid: true},
 	})
 	if err7 != nil {
 		return Logger.LogErr(loc, err7)
 	}
 
-	ServerConfig.PeerId = tmp_peerids[0]
+	ServerConfig.PeerId = tmp_peerids[0].PeerID
+
+	StorageStruct.PeerId = tmp_peerids[0].PeerID
+	StorageStruct.PeerRole = tmp_peerids[0].PeerRole.PeerRoleType
 
 	return nil
 }
@@ -146,4 +151,52 @@ func GetFiles(ctx ftp_context.Context, StorageStruct *server_config.StorageStruc
 	}
 
 	return f, nil
+}
+
+func UpdatePeerRole(ctx ftp_context.Context, StorageStruct *server_config.StorageStruct, prev_role *db_access.PeerRoleType) error {
+	loc := log_item.Locf(`func UpdatePeerRole(ctx ftp_context.Context, StorageStruct: %v, prev_role: %v) error`, StorageStruct.PeerId.Bytes, prev_role)
+	conn := db.DBPool.GetConn()
+	defer db.DBPool.Return(conn)
+
+	if *prev_role == StorageStruct.PeerRole {
+		return nil
+	}
+
+	err1 := DB.UpdatePeerRole(ctx, conn, &db_access.UpdatePeerRoleParams{
+		PeerID:   ServerConfig.PeerId,
+		PeerRole: db_access.NullPeerRoleType{PeerRoleType: StorageStruct.PeerRole, Valid: true},
+	})
+
+	if err1 != nil {
+		Logger.LogErr(loc, err1)
+	}
+
+	return nil
+}
+
+func MarkDeleted(ctx ftp_context.Context, StorageStruct *server_config.ServerConfigStruct, file_hash string) (bool, error) {
+	loc := log_item.Locf(`MarkDeleted(ctx ftp_context.Context, StorageStruct: %v, file_hash: %v) (bool, error)`, StorageStruct.PeerId.Bytes, file_hash)
+	conn := db.DBPool.GetConn()
+	defer db.DBPool.Return(conn)
+
+	stored_count, err1 := DB.CountIfStored(ctx, conn, &file_hash)
+	if err1 != nil {
+		return false, Logger.LogErr(loc, err1)
+	}
+
+	to_delete := stored_count > 0
+	if !to_delete {
+		return false, nil
+	}
+
+	err2 := DB.MarkFileDeleted(ctx, conn, &db_access.MarkFileDeletedParams{
+		FileHash: &file_hash,
+		PeerID:   StorageStruct.PeerId.Bytes,
+	})
+
+	if err2 != nil {
+		return false, Logger.LogErr(loc, err2)
+	}
+
+	return to_delete, nil
 }

@@ -1,6 +1,33 @@
 # Commit Notes
 
-### 25th June 2024, 08:16 A, GMT +3
+### 26th June 2024, 09:29 AM, GMT +3
+```sh
+1. Able to walk dir
+2. Able to get files info from database
+3. Able to upload files into database and hash
+# Please enter the commit message for your changes. Lines starting
+# with '#' will be ignored, and an empty message aborts the commit.
+#
+# On branch main
+# Your branch is up to date with 'origin/main'.
+#
+# Changes to be committed:
+#	modified:   lib/db_access/db_main.go
+#	modified:   lib/db_access/generated/client_queries.sql.go
+#	modified:   lib/db_access/generated/models.go
+#	modified:   lib/db_access/sql/queries/client_queries.sql
+#	modified:   lib/db_access/sql/schema/client_id.sql
+#	modified:   peer/config/config.go
+#	modified:   peer/config/data_storage_struct.go
+#	modified:   peer/main.go
+#	modified:   peer/main_thread/db_access/db_helpers.go
+#	modified:   peer/main_thread/main_thread.go
+#	modified:   peer/network-peer/network_peer.go
+#	modified:   peer/server/server_loop.go
+#
+```
+
+### 25th June 2024, 08:16 AM, GMT +3
 ```sh
 1. Database permissions sorted
 2. Able to create and store CA_pem in db 

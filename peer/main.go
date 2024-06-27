@@ -18,11 +18,6 @@ import (
 var ServerConfig = server_config.ServerConfig
 var Logger = logging.Logger
 
-func init() {
-	logging.InitialiseLogging(ServerConfig.StorageDirectory)
-
-}
-
 func main() {
 	loc := log_item.Loc(`func main()`)
 	ctx := ftp_context.CreateNewContext()
@@ -30,19 +25,24 @@ func main() {
 
 	db.ConnectToDB(ctx)
 
-	go logging.Logger.Engine(ctx, ServerConfig.StorageDirectory)
+	storage_struct := mainthread.NewStorageStruct(ctx)
+
+	logging.InitialiseLogging(storage_struct.StorageDirectory)
+
+	go logging.Logger.Engine(ctx, storage_struct.StorageDirectory)
 	for i := 0; ; i += 1 {
 
-		err1 := db_helpers.ConnectClient(ctx)
+		err1 := db_helpers.ConnectClient(ctx, storage_struct)
 		if err1 == nil {
 			break
 		}
 		Logger.LogErr(loc, err1)
-		<-time.After(time.Second)
-		if i > 2 {
+		<-time.After(time.Second + time.Duration(5*i+1))
+		if i > 4 {
 			log.Fatalln("fatal termination: couldn't connect to db and get peer_id")
 		}
 	}
+
 	PeerSrv := networkpeer.CreatePeerServer(ctx)
 	BrowserSrv := browserserver.CreateBrowserServer()
 	err_c := make(chan error)
@@ -51,7 +51,7 @@ func main() {
 
 	log.Println("\nBrowser: http://127.0.0.1"+ServerConfig.BrowserPort, "\nPeer: https://"+ServerConfig.LocalIp().String()+ServerConfig.PeerPort)
 
-	err1 := mainthread.Loop(ctx.NewChild())
+	err1 := mainthread.Loop(ctx.NewChild(), storage_struct)
 	if err1 != nil {
 		log.Fatalln(logging.Logger.LogErr(loc, err1))
 	}

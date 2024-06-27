@@ -4,13 +4,17 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev:lib":"cd lib && air | tee tmp.log.txt",
+    "dev:lib":"cd lib && air | tee tmp.log.txt ",
+    "generate":"cd lib && sqlc generate | tee tmp.log.txt",
     "dev:server":"cd peer && air | tee tmp.log.txt",
+    "dev:client":"cd client && air | tee tmp.log.txt",
     "dev":"powershell ./dev_script.ps1",
     "openports":"netstat -a -n -p tcp -o",
     "kill:server":"taskkill -im ftp_server.exe -f",
     "kill:air":"taskkill -im air.exe -f",
     "kill":"powershell ./dev_kill_script.ps1",
+    "build":"npm run generate && cd peer && go build -o ./tmp/ftp_server.exe ." ,
+    "run:storage":"cd peer\\tmp\\storage_server && ..\\ftp_server.exe",
     "unlock":"powershell \"Get-ChildItem * -Include *.lock -Recurse | Remove-Item\""
 
   },

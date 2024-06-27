@@ -24,8 +24,6 @@ type ServerConfigStruct struct {
 	PeerPort    string `json:"peer_port"`
 	BrowserPort string `json:"browser_port"`
 
-	CertsDirectory    string    `json:"certs_dir"`
-	StorageDirectory  string    `json:"storage_directory"`
 	DatabaseURL       string    `json:"db_url"`
 	TLS_Cert_Creation time.Time `json:"cert_creation_time"`
 	TLS_Cert          *ftp_tlshandler.TLSCert
@@ -47,13 +45,6 @@ func ReadEnv() (err error) {
 	} else {
 		ServerConfig.BrowserPort = ":" + ServerConfig.BrowserPort
 	}
-
-	ServerConfig.StorageDirectory, ok = os.LookupEnv("STORAGE_DIRECTORY")
-	if !ok || len(ServerConfig.StorageDirectory) < 1 {
-		log.Fatalln(`Fatal "STORAGE_DIRECTORY" missing from .env`)
-	}
-
-	ServerConfig.CertsDirectory = ServerConfig.StorageDirectory + "/ssl_certs"
 
 	ServerConfig.DatabaseURL, ok = os.LookupEnv("DATABASE_URL")
 	if !ok || len(ServerConfig.DatabaseURL) < 1 {
